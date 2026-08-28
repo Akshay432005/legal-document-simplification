@@ -1,0 +1,48 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-5 mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-5">
+            <div class="premium-card p-5 shadow-lg animate-fade-up">
+                <div class="text-center mb-4">
+                    <div class="stats-icon mx-auto mb-3">
+                        <i class="fa-solid fa-lock text-primary"></i>
+                    </div>
+                    <h2 class="h3">Welcome Back</h2>
+                    <p class="text-muted">Sign in to your LexiSimplify dashboard</p>
+                </div>
+                
+                <form action="{{ url_for('login') }}" method="POST">
+                    <div class="mb-3">
+                        <label for="username" class="form-label fw-600">Username or Email</label>
+                        <div class="input-group">
+                            <span class="input-group-text bg-transparent border-end-0 text-muted"><i class="fa-solid fa-envelope"></i></span>
+                            <input type="text" class="form-control border-start-0 ps-0" id="username" name="username" placeholder="Enter username or email" required>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between">
+                            <label for="password" class="form-label fw-600">Password</label>
+                            <a href="{{ url_for('forgot_password') }}" class="small text-decoration-none">Forgot Password?</a>
+                        </div>
+                        <div class="input-group">
+                            <span class="input-group-text bg-transparent border-end-0 text-muted"><i class="fa-solid fa-key"></i></span>
+                            <input type="password" class="form-control border-start-0 ps-0" id="password" name="password" placeholder="••••••••" required>
+                        </div>
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100 py-3 rounded-3 mb-3 shadow">
+                        Sign In <i class="fa-solid fa-right-to-bracket ms-2"></i>
+                    </button>
+                </form>
+                
+                <div class="text-center mt-3">
+                    <p class="text-muted mb-0">Don't have an account? <a href="{{ url_for('register') }}" class="text-decoration-none fw-bold">Sign Up</a></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

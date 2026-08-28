@@ -1,0 +1,245 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container-fluid px-md-5 py-4 animate-fade-up">
+    <!-- Header with Action controls -->
+    <div class="row align-items-center mb-4">
+        <div class="col-lg-6 mb-3 mb-lg-0">
+            <a href="{{ url_for('dashboard') }}" class="btn btn-secondary-custom btn-sm rounded-pill px-3 mb-2">
+                <i class="fa-solid fa-arrow-left me-1"></i> Back to Dashboard
+            </a>
+            <h1 class="h3 mb-0">Analysis &amp; Simplification Results</h1>
+            <p class="text-secondary small mb-0">File: <span class="fw-bold">{{ doc['filename'] }}</span> | Processed on {{ doc['created_at'].split()[0] }}</p>
+        </div>
+        
+        <div class="col-lg-6 text-lg-end">
+            <button class="btn btn-outline-secondary btn-sm px-3 rounded-pill me-2" onclick="window.print()">
+                <i class="fa-solid fa-print me-1"></i> Print Report
+            </button>
+            <button class="btn btn-outline-secondary btn-sm px-3 rounded-pill me-2" onclick="navigator.clipboard.writeText(`{{ doc['simplified_text'] | replace('\n', ' ') | replace('\"', '\\\"') }}`); alert('Simplified text copied to clipboard!');">
+                <i class="fa-solid fa-copy me-1"></i> Copy Plain Text
+            </button>
+            <div class="btn-group">
+                <button class="btn btn-primary btn-sm px-4 rounded-pill dropdown-toggle shadow-sm" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fa-solid fa-download me-1"></i> Download Output
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end border-0 shadow-lg">
+                    <li><a class="dropdown-item py-2" href="{{ url_for('download_document', doc_id=doc['id'], fmt='pdf') }}"><i class="fa-regular fa-file-pdf text-danger me-2"></i>PDF Document</a></li>
+                    <li><a class="dropdown-item py-2" href="{{ url_for('download_document', doc_id=doc['id'], fmt='docx') }}"><i class="fa-regular fa-file-word text-primary me-2"></i>Word Document (.docx)</a></li>
+                    <li><a class="dropdown-item py-2" href="{{ url_for('download_document', doc_id=doc['id'], fmt='txt') }}"><i class="fa-regular fa-file-lines text-secondary me-2"></i>Plain Text (.txt)</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- NLP Evaluation Statistics Panel -->
+    <div class="row g-4 mb-4">
+        <div class="col-md-3">
+            <div class="premium-card p-3 text-center h-100 border-start border-danger border-4">
+                <span class="text-secondary small d-block mb-1">Original Readability</span>
+                <h3 class="h4 text-danger font-monospace mb-1">{{ doc['readability_before'] }}/100</h3>
+                <span class="text-muted small">Flesch Reading Ease (Difficult)</span>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="premium-card p-3 text-center h-100 border-start border-success border-4">
+                <span class="text-secondary small d-block mb-1">Simplified Readability</span>
+                <h3 class="h4 text-success font-monospace mb-1">{{ doc['readability_after'] }}/100</h3>
+                <span class="text-success small fw-bold">
+                    <i class="fa-solid fa-trend-up"></i> +{{ (doc['readability_after'] - doc['readability_before']) | round(1) }}% Easier
+                </span>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="premium-card p-3 text-center h-100 border-start border-info border-4">
+                <span class="text-secondary small d-block mb-1">Meaning Preservation</span>
+                <h3 class="h4 text-info font-monospace mb-1">{{ doc['meaning_preservation'] }}%</h3>
+                <span class="text-muted small">High Semantic Integrity</span>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="premium-card p-3 text-center h-100 border-start border-warning border-4">
+                <span class="text-secondary small d-block mb-1">Jargon Terms Replaced</span>
+                <h3 class="h4 text-warning font-monospace mb-1">{{ doc['legal_terms_count'] }}</h3>
+                <span class="text-muted small">Hover words for meanings</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs Nav for view modes -->
+    <ul class="nav nav-pills mb-4" id="pills-tab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active" id="pills-pair-tab" data-bs-toggle="pill" data-bs-target="#pills-pair" type="button" role="tab" aria-controls="pills-pair" aria-selected="true">
+                <i class="fa-solid fa-arrows-split-up-and-left me-1"></i> Sentence Comparison
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="pills-side-tab" data-bs-toggle="pill" data-bs-target="#pills-side" type="button" role="tab" aria-controls="pills-side" aria-selected="false">
+                <i class="fa-solid fa-columns me-1"></i> Full Document View
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" id="pills-nlp-tab" data-bs-toggle="pill" data-bs-target="#pills-nlp" type="button" role="tab" aria-controls="pills-nlp" aria-selected="false">
+                <i class="fa-solid fa-brain me-1"></i> NLP Enrichment Data
+            </button>
+        </li>
+    </ul>
+
+    <!-- Tabs Content -->
+    <div class="tab-content" id="pills-tabContent">
+        <!-- Tab 1: Sentence Pair Comparison -->
+        <div class="tab-pane fade show active" id="pills-pair" role="tabpanel" aria-labelledby="pills-pair-tab">
+            <div class="premium-card p-4">
+                <div class="row border-bottom pb-2 mb-3 fw-bold text-secondary d-none d-lg-flex">
+                    <div class="col-lg-6">Original Legal Sentence</div>
+                    <div class="col-lg-6">Simplified Plain English</div>
+                </div>
+                {% for pair in comparison_pairs %}
+                    <div class="row sentence-pair">
+                        <div class="col-lg-6 sentence-orig">
+                            {{ pair['original'] | safe }}
+                        </div>
+                        <div class="col-lg-6 sentence-simp">
+                            {{ pair['simplified'] }}
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Tab 2: Full Document View (Side-by-Side Panels) -->
+        <div class="tab-pane fade" id="pills-side" role="tabpanel" aria-labelledby="pills-side-tab">
+            <div class="row g-4">
+                <div class="col-lg-6">
+                    <div class="premium-card p-4 h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h3 class="h6 mb-0 text-secondary fw-bold"><i class="fa-solid fa-signature text-warning me-2"></i>Original Legal Document</h3>
+                            <span class="badge bg-warning-subtle text-warning border border-warning-subtle rounded-pill">Legalese Jargon</span>
+                        </div>
+                        <div class="doc-viewer-card">
+                            {{ highlighted_original | safe }}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="col-lg-6">
+                    <div class="premium-card p-4 h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-3">
+                            <h3 class="h6 mb-0 text-secondary fw-bold"><i class="fa-solid fa-file-circle-check text-success me-2"></i>Simplified Document</h3>
+                            <span class="badge bg-success-subtle text-success border border-success-subtle rounded-pill">Plain English</span>
+                        </div>
+                        <div class="doc-viewer-card">
+                            {{ doc['simplified_text'] }}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab 3: NLP Enrichment Panel -->
+        <div class="tab-pane fade" id="pills-nlp" role="tabpanel" aria-labelledby="pills-nlp-tab">
+            <div class="row g-4">
+                <!-- Entities Sidebar -->
+                <div class="col-lg-4">
+                    <div class="premium-card p-4 h-100">
+                        <h3 class="h6 mb-3 border-bottom pb-2"><i class="fa-solid fa-tags text-primary me-2"></i>Named Entities Extracted (NER)</h3>
+                        <p class="text-secondary small mb-3">spaCy identified these entities within the document:</p>
+                        {% if nlp['entities'] %}
+                            <div class="d-flex flex-wrap">
+                                {% for ent in nlp['entities'] %}
+                                    <span class="nlp-badge 
+                                        {% if ent['label'] in ['ORG', 'COMPANY'] %}nlp-org
+                                        {% elif ent['label'] in ['PERSON', 'CLIENT'] %}nlp-person
+                                        {% elif ent['label'] in ['DATE', 'TIME'] %}nlp-date
+                                        {% elif ent['label'] in ['GPE', 'LOC'] %}nlp-gpe
+                                        {% elif ent['label'] in ['LAW', 'ACT'] %}nlp-law
+                                        {% else %}nlp-money{% endif %}" 
+                                        data-bs-toggle="tooltip" 
+                                        title="{{ ent['explanation'] }}">
+                                        <b>{{ ent['text'] }}</b>: {{ ent['label'] }}
+                                    </span>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="text-muted small">No distinct named entities detected.</p>
+                        {% endif %}
+                        
+                        <h3 class="h6 mt-4 mb-3 border-bottom pb-2"><i class="fa-solid fa-key text-primary me-2"></i>Keywords Extracted</h3>
+                        <div>
+                            {% for kw in nlp['keywords'] %}
+                                <span class="badge bg-secondary text-secondary-emphasis rounded-pill me-2 mb-2 p-2 px-3 small">{{ kw }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Part of Speech colorizer -->
+                <div class="col-lg-8">
+                    <div class="premium-card p-4 h-100">
+                        <div class="d-flex justify-content-between align-items-center mb-3 border-bottom pb-2">
+                            <h3 class="h6 mb-0"><i class="fa-solid fa-spell-check text-primary me-2"></i>Part of Speech (POS) Tagging</h3>
+                            <button id="togglePosBtn" class="btn btn-outline-primary btn-sm px-3 rounded-pill">Highlight Parts of Speech</button>
+                        </div>
+                        <p class="text-secondary small mb-4">Colorizes words by parts of speech to show syntactic distribution.</p>
+                        
+                        <div id="wordAnalysisPane" class="lh-lg p-3 rounded-3 border bg-light-section" style="max-height: 250px; overflow-y: auto;">
+                            {% for word in nlp['pos_tags'] %}
+                                <span class="word-span px-1 rounded
+                                    {% if word['pos'] == 'NOUN' %}pos-noun
+                                    {% elif word['pos'] == 'VERB' %}pos-verb
+                                    {% elif word['pos'] == 'ADJ' %}pos-adj
+                                    {% elif word['pos'] == 'ADV' %}pos-adv
+                                    {% elif word['pos'] == 'PRON' %}pos-pron{% endif %}" 
+                                    data-bs-toggle="tooltip" 
+                                    title="{{ word['pos'] }} - {{ word['explanation'] }}">{{ word['text'] }}</span>
+                            {% endfor %}
+                        </div>
+
+                        <!-- Syntactic Dependencies table -->
+                        <h3 class="h6 mt-4 mb-3 border-bottom pb-2"><i class="fa-solid fa-network-wired text-primary me-2"></i>Syntactic Dependency Parsing (spaCy)</h3>
+                        <div class="table-responsive" style="max-height: 200px;">
+                            <table class="table table-sm table-striped small align-middle">
+                                <thead>
+                                    <tr>
+                                        <th>Word</th>
+                                        <th>Dependency relation</th>
+                                        <th>Governor / Head</th>
+                                        <th>Relationship detail</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for dep in nlp['dependencies'] %}
+                                        <tr>
+                                            <td class="fw-bold">{{ dep['text'] }}</td>
+                                            <td><span class="badge bg-primary-subtle text-primary font-monospace">{{ dep['dep'] }}</span></td>
+                                            <td class="text-muted">{{ dep['head'] }}</td>
+                                            <td class="text-secondary small">{{ dep['explanation'] }}</td>
+                                        </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+/* CSS class to toggle on POS highlights */
+#wordAnalysisPane.highlight-pos-active span:not(.pos-noun):not(.pos-verb):not(.pos-adj):not(.pos-adv):not(.pos-pron) {
+    opacity: 0.55;
+    background: transparent !important;
+    color: inherit !important;
+}
+
+#wordAnalysisPane span {
+    transition: all 0.25s ease;
+}
+
+.bg-light-primary {
+    background-color: rgba(79, 70, 229, 0.04);
+}
+</style>
+{% endblock %}
